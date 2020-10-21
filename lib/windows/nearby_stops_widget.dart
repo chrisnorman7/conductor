@@ -9,6 +9,7 @@ import 'package:location/location.dart';
 import '../api.dart';
 import '../location.dart';
 import '../stop.dart';
+import 'extra_data_widget.dart';
 
 class NearbyStopsWidget extends StatefulWidget {
   @override
@@ -20,8 +21,8 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   PermissionStatus permissionGranted;
   SimpleLocation currentLocation;
   Timer timer;
-  String source;
   List<Stop> stops;
+  Map<String, String> extraData;
 
   @override
   void initState() {
@@ -51,15 +52,9 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
       child = const Text('Loading...');
     } else {
       child = ListView.builder(
-        itemCount: stops.length + 1,
+        itemCount: stops.length,
         itemBuilder: (BuildContext context, int index) {
-          if (index == 0) {
-            return ListTile(
-              title: const Text('Source'),
-              subtitle: Text(source),
-            );
-          }
-          final Stop stop = stops[index - 1];
+          final Stop stop = stops[index];
           String type;
           if (stop.type == StopTypes.bus) {
             type = 'Bus stop';
@@ -68,13 +63,27 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
           } else {
             type = 'Tram stop';
           }
-          return ListTile(title: Text(stop.name), subtitle: Text(type));
+          return ListTile(
+            title: Text(stop.name),
+            subtitle: Text(type),
+          );
         },
       );
     }
     return Scaffold(
       appBar: AppBar(
         title: const Text('Nearby Stops'),
+        actions: <Widget>[
+          ElevatedButton(
+              child: const Text('Data Attribution'),
+              onPressed: (extraData == null || extraData.isEmpty)
+                  ? null
+                  : () => Navigator.push<ExtraDataWidget>(
+                      context,
+                      MaterialPageRoute<ExtraDataWidget>(
+                          builder: (BuildContext context) =>
+                              ExtraDataWidget('Data Attribution', extraData))))
+        ],
       ),
       body: child,
     );
@@ -96,7 +105,9 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
     setState(() {
       final Map<String, dynamic> json =
           jsonDecode(r.body) as Map<String, dynamic>;
-      source = json['source'] as String;
+      extraData = <String, String>{};
+      extraData['Source'] = json['source'] as String;
+      extraData['Acknowledgements'] = json['acknowledgements'] as String;
       stops = <Stop>[];
       for (final dynamic data in json['member'] as List<dynamic>) {
         final Map<String, dynamic> stopData = data as Map<String, dynamic>;
