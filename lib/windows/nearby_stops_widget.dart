@@ -21,7 +21,6 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   bool serviceEnabled;
   PermissionStatus permissionGranted;
   SimpleLocation currentLocation;
-  Timer timer;
   List<Stop> stops;
   Map<String, String> extraData;
   DateTime lastLoaded;
@@ -30,16 +29,7 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   @override
   void initState() {
     super.initState();
-    location.onLocationChanged.listen((LocationData data) {
-      currentLocation =
-          SimpleLocation(data.latitude, data.longitude, data.accuracy);
-      if (timer == null) {
-        loadStops();
-        timer ??= Timer.periodic(const Duration(seconds: 30), (Timer t) {
-          loadStops();
-        });
-      }
-    });
+    loadStops();
   }
 
   @override
@@ -100,11 +90,13 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
                               ExtraDataWidget('Data Attribution', extraData)))),
           ElevatedButton(
             child: const Text('Refresh'),
-            onPressed: () => setState(() {
-              stops = null;
-              extraData = null;
-              loadStops();
-            }),
+            onPressed: currentLocation == null
+                ? null
+                : () => setState(() {
+                      stops = null;
+                      extraData = null;
+                      loadStops();
+                    }),
           )
         ],
       ),
@@ -118,6 +110,13 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
     if (!serviceEnabled || permissionGranted != PermissionStatus.granted) {
       return;
     }
+    location.onLocationChanged.listen((LocationData data) {
+      currentLocation =
+          SimpleLocation(data.latitude, data.longitude, data.accuracy);
+      if (stops == null) {
+        loadStops();
+      }
+    });
     final Uri u = getApiUri(placesPath, params: <String, String>{
       'lat': currentLocation.lat.toString(),
       'lon': currentLocation.lon.toString()
