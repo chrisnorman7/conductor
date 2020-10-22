@@ -7,10 +7,17 @@ enum StopTypes { bus, train, tram, tube }
 ///
 /// The type of a stop is defined by it's type property.
 class Stop {
-  Stop(this.type, this.name, this.location, this.code);
+  Stop(
+    this.type,
+    this.name,
+    this.location,
+    this.distance,
+    this.code,
+  );
 
   final StopTypes type;
   final String name;
   final SimpleLocation location;
+  final double distance;
   final String code;
 }

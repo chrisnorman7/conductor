@@ -10,6 +10,7 @@ import '../api.dart';
 import '../location.dart';
 import '../stop.dart';
 import 'extra_data_widget.dart';
+import 'stop_widget.dart';
 
 class NearbyStopsWidget extends StatefulWidget {
   @override
@@ -23,6 +24,8 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   Timer timer;
   List<Stop> stops;
   Map<String, String> extraData;
+  DateTime lastLoaded;
+  String error;
 
   @override
   void initState() {
@@ -50,6 +53,8 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
           'To function properly, this app needs location permision. Please grant location permissions in your settings app.');
     } else if (stops == null) {
       child = const Text('Loading...');
+    } else if (error != null) {
+      child = Text(error);
     } else {
       child = ListView.builder(
         itemCount: stops.length,
@@ -60,12 +65,22 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
             type = 'Bus stop';
           } else if (stop.type == StopTypes.train) {
             type = 'Train station';
+          } else if (stop.type == StopTypes.tube) {
+            type = 'Tube station';
           } else {
             type = 'Tram stop';
           }
           return ListTile(
+            isThreeLine: true,
             title: Text(stop.name),
-            subtitle: Text(type),
+            subtitle: Text('${stop.distance.toStringAsFixed(0)} m'),
+            trailing: Text(type),
+            onTap: () {
+              Navigator.push<StopWidget>(
+                  context,
+                  MaterialPageRoute<StopWidget>(
+                      builder: (BuildContext context) => StopWidget(stop)));
+            },
           );
         },
       );
@@ -82,7 +97,15 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
                       context,
                       MaterialPageRoute<ExtraDataWidget>(
                           builder: (BuildContext context) =>
-                              ExtraDataWidget('Data Attribution', extraData))))
+                              ExtraDataWidget('Data Attribution', extraData)))),
+          ElevatedButton(
+            child: const Text('Refresh'),
+            onPressed: () => setState(() {
+              stops = null;
+              extraData = null;
+              loadStops();
+            }),
+          )
         ],
       ),
       body: child,
@@ -95,20 +118,16 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
     if (!serviceEnabled || permissionGranted != PermissionStatus.granted) {
       return;
     }
-    final Uri u = Uri.https(authority, placesPath, <String, String>{
-      'app_id': appId,
-      'app_key': appKey,
+    final Uri u = getApiUri(placesPath, params: <String, String>{
       'lat': currentLocation.lat.toString(),
       'lon': currentLocation.lon.toString()
     });
     final Response r = await get(u);
-    setState(() {
-      final Map<String, dynamic> json =
-          jsonDecode(r.body) as Map<String, dynamic>;
-      extraData = <String, String>{};
-      extraData['Source'] = json['source'] as String;
-      extraData['Acknowledgements'] = json['acknowledgements'] as String;
-      stops = <Stop>[];
+    final Map<String, dynamic> json =
+        jsonDecode(r.body) as Map<String, dynamic>;
+    stops = <Stop>[];
+    error = json['error'] as String;
+    if (error == null) {
       for (final dynamic data in json['member'] as List<dynamic>) {
         final Map<String, dynamic> stopData = data as Map<String, dynamic>;
         StopTypes type;
@@ -134,22 +153,29 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
             print(stopData);
             continue;
         }
-        if (type == StopTypes.bus ||
-            type == StopTypes.tram ||
-            type == StopTypes.tube) {
-          code = stopData['atcocode'] as String;
-          name = '$name (${stopData["description"]})';
-        } else if (type == StopTypes.train) {
+        if (type == StopTypes.train) {
           code = stopData['station_code'] as String;
         } else {
-          print(stopData.keys);
+          code = stopData['atcocode'] as String;
+          name = '$name (${stopData["description"]})';
         }
-        stops.add(Stop(
+        final Stop stop = Stop(
             type,
             name,
             SimpleLocation(stopData['latitude'] as double,
                 stopData['longitude'] as double, stopData['accuracy'] as int),
-            code));
+            stopData['distance'] as double,
+            code);
+        stops.add(stop);
+      }
+    } else {
+      extraData = null;
+    }
+    setState(() {
+      if (error == null) {
+        extraData = <String, String>{};
+        extraData['Source'] = json['source'] as String;
+        extraData['Acknowledgements'] = json['acknowledgements'] as String;
       }
     });
   }
