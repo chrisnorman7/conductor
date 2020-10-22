@@ -14,12 +14,22 @@ import 'stop_widget.dart';
 
 class NearbyStopsWidget extends StatefulWidget {
   @override
-  NearbyStopsWidgetState createState() => NearbyStopsWidgetState();
+  const NearbyStopsWidget(this.serviceEnabled, this.permissionStatus);
+
+  final bool serviceEnabled;
+  final PermissionStatus permissionStatus;
+
+  @override
+  NearbyStopsWidgetState createState() =>
+      NearbyStopsWidgetState(serviceEnabled, permissionStatus);
 }
 
 class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
+  @override
+  NearbyStopsWidgetState(this.serviceEnabled, this.permissionStatus) : super();
   bool serviceEnabled;
-  PermissionStatus permissionGranted;
+  PermissionStatus permissionStatus;
+
   SimpleLocation currentLocation;
   List<Stop> stops;
   Map<String, String> extraData;
@@ -29,7 +39,13 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   @override
   void initState() {
     super.initState();
-    loadStops();
+    location.onLocationChanged.listen((LocationData data) {
+      currentLocation =
+          SimpleLocation(data.latitude, data.longitude, data.accuracy);
+      if (stops == null) {
+        loadStops();
+      }
+    });
   }
 
   @override
@@ -37,10 +53,10 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
     Widget child;
     if (currentLocation == null) {
       child = const Text('Getting your location...');
-    } else if (serviceEnabled == null ||
-        permissionGranted != PermissionStatus.granted) {
+    } else if (serviceEnabled == false ||
+        permissionStatus != PermissionStatus.granted) {
       child = const Text(
-          'To function properly, this app needs location permision. Please grant location permissions in your settings app.');
+          'In order to work correctly, this app needs access to location services. Please grant location access for this app to continue.');
     } else if (stops == null) {
       child = const Text('Loading...');
     } else if (error != null) {
@@ -105,18 +121,6 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   }
 
   Future<void> loadStops() async {
-    serviceEnabled ??= await location.serviceEnabled();
-    permissionGranted ??= await location.requestPermission();
-    if (!serviceEnabled || permissionGranted != PermissionStatus.granted) {
-      return;
-    }
-    location.onLocationChanged.listen((LocationData data) {
-      currentLocation =
-          SimpleLocation(data.latitude, data.longitude, data.accuracy);
-      if (stops == null) {
-        loadStops();
-      }
-    });
     final Uri u = getApiUri(placesPath, params: <String, String>{
       'lat': currentLocation.lat.toString(),
       'lon': currentLocation.lon.toString()

@@ -1,35 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:location/location.dart' show PermissionStatus;
+
+import 'location.dart' show location;
+import 'windows/loading_widget.dart';
 import 'windows/nearby_stops_widget.dart';
 
 const String appName = 'Conductor';
 
 Future<void> main() async {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  // This widget is the root of your application.
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: appName,
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // Try running your application with "flutter run". You'll see the
-        // application has a blue toolbar. Then, without quitting the app, try
-        // changing the primarySwatch below to Colors.green and then invoke
-        // "hot reload" (press "r" in the console where you ran "flutter run",
-        // or simply save your changes to "hot reload" in a Flutter IDE).
-        // Notice that the counter didn't reset back to zero; the application
-        // is not restarted.
-        primarySwatch: Colors.blue,
-        // This makes the visual density adapt to the platform that you run
-        // the app on. For desktop platforms, the controls will be smaller and
-        // closer together (more dense) than on mobile platforms.
-        visualDensity: VisualDensity.adaptivePlatformDensity,
-      ),
-      home: NearbyStopsWidget(),
-    );
-  }
+  runApp(MaterialApp(
+    title: appName,
+    home: LoadingWidget(),
+  ));
+  final bool serviceEnabled = await location.serviceEnabled();
+  final PermissionStatus permissionGranted = await location.requestPermission();
+  runApp(
+    MaterialApp(
+        title: appName,
+        theme: ThemeData(
+          primarySwatch: Colors.blue,
+          visualDensity: VisualDensity.adaptivePlatformDensity,
+        ),
+        home: NearbyStopsWidget(serviceEnabled, permissionGranted)),
+  );
 }

@@ -1,7 +1,7 @@
 /// Stores a reference to the location object.
 import 'package:location/location.dart' show Location;
 
-Location location = Location();
+final Location location = Location();
 
 /// Contains basic location information.
 /// Used by bus stops, train stations, tram stops, and anything else I add in the future.

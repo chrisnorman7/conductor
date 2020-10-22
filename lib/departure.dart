@@ -1,24 +1,37 @@
 /// Provides the [Departure] class.
 
+enum DepartureStates {
+  early,
+  onTime,
+  late,
+  cancelled,
+}
+
 class Departure {
   Departure(
       this.name,
       this.mode,
-      this.direction,
+      this.platform,
+      this.state,
+      this.origin,
+      this.destination,
       this.operator,
       this.aimedDeparture,
       this.expectedDeparture,
-      this.cancelled,
+      this.problems,
       this.source,
       this.url);
 
   final String name;
   final String mode;
-  final String direction;
+  final String platform;
+  final DepartureStates state;
+  final String origin;
+  final String destination;
   final String operator;
   final DateTime aimedDeparture;
   final DateTime expectedDeparture;
-  final String cancelled;
+  final String problems;
   final String source;
   final String url;
 }
