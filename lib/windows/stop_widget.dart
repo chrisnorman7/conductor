@@ -1,13 +1,14 @@
+/// Provides the [StopWidget] class.
 import 'dart:async';
 import 'dart:convert';
 
-/// Provides the [StopWidget] class.
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 
 import '../api.dart';
 import '../departure.dart';
 import '../stop.dart';
+import 'route_widget.dart';
 
 class StopWidget extends StatefulWidget {
   @override
@@ -85,14 +86,18 @@ class StopWidgetState extends State<StopWidget> {
           }
           if (departure.mode == 'train') {
             difference =
-                '$difference ${diff.isNegative ? "from" : "on"} platform ${departure.platform ?? "unknown"}';
+                '$difference (platform ${departure.platform ?? "unknown"})';
           }
           return ListTile(
-            isThreeLine: true,
-            leading: Text('${departure.name}: ${departure.destination}'),
-            subtitle: Text(difference),
-            trailing: Text(departure.operator),
-          );
+              isThreeLine: true,
+              leading: Text('${departure.name}: ${departure.destination}'),
+              subtitle: Text(difference),
+              trailing: Text(departure.operator),
+              onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute<RouteWidget>(
+                      builder: (BuildContext context) =>
+                          RouteWidget(departure))));
         },
       );
     }
@@ -146,9 +151,6 @@ class StopWidgetState extends State<StopWidget> {
             aimedDeparture = DateTime.parse(
                 '${departureData["date"] ?? nowDateString} ${departureData["aimed_departure_time"]}');
           } on FormatException {
-            for (final dynamic k in departureData.keys) {
-              print('$k: ${departureData[k]}');
-            }
             aimedDeparture = null;
           }
           DateTime expectedDeparture;
@@ -179,8 +181,10 @@ class StopWidgetState extends State<StopWidget> {
             }
           }
           final String source = departureData['source'] as String;
-          final String url = departureData['id'] as String;
+          final String url = (departureData['id'] ??
+              departureData['service_timetable']['id']) as String;
           departures.add(Departure(
+              stop.type,
               name,
               mode,
               departureData['platform'] as String,

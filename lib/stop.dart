@@ -11,13 +11,11 @@ class Stop {
     this.type,
     this.name,
     this.location,
-    this.distance,
     this.code,
   );
 
   final StopTypes type;
   final String name;
   final SimpleLocation location;
-  final double distance;
   final String code;
 }

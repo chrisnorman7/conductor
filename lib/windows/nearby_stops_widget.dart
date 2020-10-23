@@ -41,9 +41,16 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
     super.initState();
     location.onLocationChanged.listen((LocationData data) {
       currentLocation =
-          SimpleLocation(data.latitude, data.longitude, data.accuracy);
+          SimpleLocation(data.latitude, data.longitude, data.accuracy.floor());
+      if (extraData != null) {
+        extraData['Latitude'] = data.latitude.toStringAsFixed(2);
+        extraData['Longitude'] = data.longitude.toStringAsFixed(2);
+        extraData['GPS Accuracy'] = distanceToString(data.accuracy);
+      }
       if (stops == null) {
         loadStops();
+      } else {
+        setState(() {});
       }
     });
   }
@@ -76,10 +83,12 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
           } else {
             type = 'Tram stop';
           }
+          final String distance =
+              distanceToString(currentLocation.distanceBetween(stop.location));
           return ListTile(
             isThreeLine: true,
             title: Text(stop.name),
-            subtitle: Text('${stop.distance.toStringAsFixed(0)} m'),
+            subtitle: Text(distance),
             trailing: Text(type),
             onTap: () {
               Navigator.push<StopWidget>(
@@ -110,7 +119,6 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
                 ? null
                 : () => setState(() {
                       stops = null;
-                      extraData = null;
                       loadStops();
                     }),
           )
@@ -131,6 +139,9 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
     stops = <Stop>[];
     error = json['error'] as String;
     if (error == null) {
+      extraData = <String, String>{};
+      extraData['Source'] = json['source'] as String;
+      extraData['Acknowledgements'] = json['acknowledgements'] as String;
       for (final dynamic data in json['member'] as List<dynamic>) {
         final Map<String, dynamic> stopData = data as Map<String, dynamic>;
         StopTypes type;
@@ -167,19 +178,12 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
             name,
             SimpleLocation(stopData['latitude'] as double,
                 stopData['longitude'] as double, stopData['accuracy'] as int),
-            stopData['distance'] as double,
             code);
         stops.add(stop);
       }
     } else {
       extraData = null;
     }
-    setState(() {
-      if (error == null) {
-        extraData = <String, String>{};
-        extraData['Source'] = json['source'] as String;
-        extraData['Acknowledgements'] = json['acknowledgements'] as String;
-      }
-    });
+    setState(() {});
   }
 }

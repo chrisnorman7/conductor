@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:location/location.dart' show PermissionStatus;
+import 'package:location/location.dart';
 
 import 'location.dart' show location;
 import 'windows/loading_widget.dart';
@@ -14,6 +14,11 @@ Future<void> main() async {
   ));
   final bool serviceEnabled = await location.serviceEnabled();
   final PermissionStatus permissionGranted = await location.requestPermission();
+  if (serviceEnabled == true && permissionGranted == PermissionStatus.granted) {
+    await location.changeSettings(
+      accuracy: LocationAccuracy.high,
+    );
+  }
   runApp(
     MaterialApp(
         title: appName,

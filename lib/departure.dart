@@ -1,5 +1,7 @@
 /// Provides the [Departure] class.
 
+import 'stop.dart';
+
 enum DepartureStates {
   early,
   onTime,
@@ -9,6 +11,7 @@ enum DepartureStates {
 
 class Departure {
   Departure(
+      this.type,
       this.name,
       this.mode,
       this.platform,
@@ -22,6 +25,7 @@ class Departure {
       this.source,
       this.url);
 
+  final StopTypes type;
   final String name;
   final String mode;
   final String platform;
