@@ -97,7 +97,7 @@ class StopWidgetState extends State<StopWidget> {
                   context,
                   MaterialPageRoute<RouteWidget>(
                       builder: (BuildContext context) =>
-                          RouteWidget(departure))));
+                          RouteWidget(departure, stop))));
         },
       );
     }
@@ -108,8 +108,9 @@ class StopWidgetState extends State<StopWidget> {
           ),
           title: Text(stop.name),
           actions: <Widget>[
-            ElevatedButton(
-              child: const Text('Refresh'),
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              tooltip: 'Refresh',
               onPressed: () => setState(() {
                 departures = null;
                 loadTimetable();

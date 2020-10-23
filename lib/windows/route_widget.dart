@@ -15,18 +15,21 @@ import 'stop_widget.dart';
 
 class RouteWidget extends StatefulWidget {
   @override
-  const RouteWidget(this.departure) : super();
+  const RouteWidget(this.departure, this.startingStop) : super();
 
   final Departure departure;
+  final Stop startingStop;
 
   @override
-  RouteWidgetState createState() => RouteWidgetState(departure);
+  RouteWidgetState createState() => RouteWidgetState(departure, startingStop);
 }
 
 class RouteWidgetState extends State<RouteWidget> {
-  RouteWidgetState(this.departure) : super();
+  RouteWidgetState(this.departure, this.startingStop) : super();
 
   final Departure departure;
+  final Stop startingStop;
+
   List<RouteStop> stops;
   RouteStop origin;
   RouteStop destination;
@@ -91,13 +94,23 @@ class RouteWidgetState extends State<RouteWidget> {
                 ? 'Unknown distance'
                 : distanceToString(stop.distance)),
             isThreeLine: true,
-            onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute<StopWidget>(
-                    builder: (BuildContext context) => StopWidget(stop.stop))),
+            onTap: () => stop.stop == startingStop
+                ? null
+                : Navigator.push(
+                    context,
+                    MaterialPageRoute<StopWidget>(
+                        builder: (BuildContext context) =>
+                            StopWidget(stop.stop))),
           );
         },
       );
+    }
+    String name = departure.name;
+    if (origin != null) {
+      name += ' from ${origin.stop.name}';
+    }
+    if (destination != null) {
+      name += ' to ${destination.stop.name}';
     }
     return Scaffold(
       appBar: AppBar(
@@ -114,7 +127,7 @@ class RouteWidgetState extends State<RouteWidget> {
             }),
           )
         ],
-        title: Text(departure.name),
+        title: Text(name),
       ),
       body: child,
     );
@@ -133,8 +146,16 @@ class RouteWidgetState extends State<RouteWidget> {
     final List<dynamic> stopsListData = json['stops'] as List<dynamic>;
     stops = <RouteStop>[];
     for (final dynamic stopData in stopsListData) {
-      DateTime date =
-          DateTime.tryParse('${stopData["date"]} ${stopData["time"]}');
+      final String dateString = (stopData['date'] ??
+          stopData['expected_departure_date'] ??
+          stopData['aimed_departure_date'] ??
+          stopData['aimed_arrival_date']) as String;
+      final String timeString = (stopData['time'] ??
+          stopData['expected_departure_time'] ??
+          stopData['aimed_arrival_time'] ??
+          stopData['aimed_departure_time'] ??
+          stopData['expected_arrival_time']) as String;
+      DateTime date = DateTime.tryParse('$dateString $timeString');
       date =
           DateTime(date.year, date.month, date.day, date.hour, date.minute, 0);
       SimpleLocation stopLocation;
@@ -142,8 +163,14 @@ class RouteWidgetState extends State<RouteWidget> {
         stopLocation = SimpleLocation(
             stopData['latitude'] as double, stopData['longitude'] as double, 0);
       }
-      final Stop stop = Stop(departure.type, stopData['stop_name'] as String,
-          stopLocation, stopData['atcocode'] as String);
+      Stop stop = Stop(
+          departure.type,
+          (stopData['stop_name'] ?? stopData['station_name']) as String,
+          stopLocation,
+          (stopData['atcocode'] ?? stopData['station_code']) as String);
+      if (stop.code == startingStop.code) {
+        stop = startingStop;
+      }
       final RouteStop rs = RouteStop(date, stop);
       if (rs.stop.code == originCode ||
           stop.name == (stopData['origin_name'] as String)) {
@@ -167,6 +194,9 @@ class RouteWidgetState extends State<RouteWidget> {
     final SimpleLocation location =
         SimpleLocation(data.latitude, data.longitude, data.accuracy.toInt());
     for (final RouteStop stop in stops) {
+      if (stop.stop.location == null) {
+        continue;
+      }
       final double distance = location.distanceBetween(stop.stop.location);
       if (stop.distance == null ||
           max(distance, stop.distance) - min(distance, stop.distance) >=

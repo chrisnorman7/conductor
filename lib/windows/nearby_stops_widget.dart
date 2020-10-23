@@ -113,8 +113,9 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
                       MaterialPageRoute<ExtraDataWidget>(
                           builder: (BuildContext context) =>
                               ExtraDataWidget('Data Attribution', extraData)))),
-          ElevatedButton(
-            child: const Text('Refresh'),
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Refresh',
             onPressed: currentLocation == null
                 ? null
                 : () => setState(() {
