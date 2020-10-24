@@ -87,7 +87,7 @@ class RouteWidgetState extends State<RouteWidget> {
           }
           final Duration difference =
               stop.date.difference(_nearestStop?.date ?? _origin.date);
-          when = '${difference.isNegative ? "-" : "+"} ';
+          when = '${difference.isNegative ? "-" : ""}';
           if (difference.inHours > 0) {
             when +=
                 '${difference.inHours.toString().padLeft(2, "0")}:${difference.inMinutes.toString().padLeft(2, '0')}';
