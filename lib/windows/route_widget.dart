@@ -78,16 +78,28 @@ class RouteWidgetState extends State<RouteWidget> {
             );
           }
           final RouteStop stop = _stops[index - 1];
-          String when;
           String name = stop.stop.name;
+          int relativeIndex;
+          if (_nearestStop != null) {
+            relativeIndex = _stops.indexOf(stop) - _stops.indexOf(_nearestStop);
+          }
           if (stop == _origin) {
             name += ' (origin stop)';
           } else if (stop == _destination) {
             name += ' (destination stop)';
+          } else if (stop == _nearestStop) {
+            name += ' (nearest stop)';
+          } else if (relativeIndex != null) {
+            if (relativeIndex == 1) {
+              name += '( next stop)';
+            } else if (relativeIndex == -1) {
+              name += ' (previous stop)';
+            }
           }
+          String when;
           final Duration difference =
               stop.date.difference(_nearestStop?.date ?? _origin.date);
-          when = '${difference.isNegative ? "-" : ""}';
+          when = difference.isNegative ? '-' : '';
           if (difference.inHours > 0) {
             when +=
                 '${difference.inHours.toString().padLeft(2, "0")}:${difference.inMinutes.toString().padLeft(2, '0')}';
