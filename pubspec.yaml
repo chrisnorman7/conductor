@@ -32,6 +32,8 @@ dependencies:
   http:
   location:
   screen_state:
+  url_launcher:
+  shared_preferences:
 
 dev_dependencies:
   flutter_test:

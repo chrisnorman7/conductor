@@ -9,6 +9,7 @@ import 'package:location/location.dart';
 import '../api.dart';
 import '../location.dart';
 import '../stop.dart';
+import 'api_credentials_form.dart';
 import 'extra_data_widget.dart';
 import 'stop_widget.dart';
 
@@ -47,7 +48,7 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
         _extraData['Longitude'] = data.longitude.toStringAsFixed(2);
         _extraData['GPS Accuracy'] = distanceToString(data.accuracy);
       }
-      if (_stops == null) {
+      if (_stops == null && credentials.valid) {
         loadStops();
       } else {
         setState(() {});
@@ -58,7 +59,9 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   @override
   Widget build(BuildContext context) {
     Widget child;
-    if (_error != null) {
+    if (credentials.valid == false) {
+      child = ApiCredentialsForm.explanation(context, () => loadStops());
+    } else if (_error != null) {
       child = Text(_error);
     } else if (_currentLocation == null) {
       child = const Text('Getting your location...');
@@ -102,6 +105,14 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
     }
     return Scaffold(
       appBar: AppBar(
+        leading: ElevatedButton(
+          child: const Text('Credentials'),
+          onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute<ApiCredentialsForm>(
+                  builder: (BuildContext context) =>
+                      ApiCredentialsForm(loadStops))),
+        ),
         title: const Text('Nearby Stops'),
         actions: <Widget>[
           ElevatedButton(
