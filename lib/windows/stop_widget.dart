@@ -25,34 +25,34 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
   StopWidgetState(this.stop) : super();
 
   final Stop stop;
-  List<Departure> departures;
-  Timer timer;
-  String error;
-  DateTime lastLoaded;
-  Screen screen;
-  StreamSubscription<ScreenStateEvent> screenStateListener;
-  bool screenOn;
-  AppLifecycleState appState;
+  List<Departure> _departures;
+  Timer _timer;
+  String _error;
+  DateTime _lastLoaded;
+  Screen _screen;
+  StreamSubscription<ScreenStateEvent> _screenStateListener;
+  bool _screenOn;
+  AppLifecycleState _appState;
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    appState = state;
+    _appState = state;
   }
 
   @override
   void initState() {
     super.initState();
-    appState = AppLifecycleState.resumed;
+    _appState = AppLifecycleState.resumed;
     WidgetsBinding.instance.addObserver(this);
-    screenOn = true;
-    screen = Screen();
-    screenStateListener =
-        screen.screenStateStream.listen((ScreenStateEvent event) {
-      screenOn = event == ScreenStateEvent.SCREEN_UNLOCKED ||
+    _screenOn = true;
+    _screen = Screen();
+    _screenStateListener =
+        _screen.screenStateStream.listen((ScreenStateEvent event) {
+      _screenOn = event == ScreenStateEvent.SCREEN_UNLOCKED ||
           event == ScreenStateEvent.SCREEN_ON;
     });
     loadTimetable();
-    timer = Timer.periodic(const Duration(seconds: 1), (Timer t) {
+    _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) {
       loadTimetable();
     });
   }
@@ -60,18 +60,18 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
   @override
   Widget build(BuildContext context) {
     Widget child;
-    if (error != null) {
-      child = Text(error);
-    } else if (departures == null) {
+    if (_error != null) {
+      child = Text(_error);
+    } else if (_departures == null) {
       child = const Text('Loading...');
-    } else if (departures.isEmpty) {
+    } else if (_departures.isEmpty) {
       child = const Text('No departures to show.');
     } else {
       final DateTime now = DateTime.now();
       child = ListView.builder(
-        itemCount: departures.length,
+        itemCount: _departures.length,
         itemBuilder: (BuildContext context, int index) {
-          final Departure departure = departures[index];
+          final Departure departure = _departures[index];
           DateTime when =
               departure.expectedDeparture ?? departure.aimedDeparture;
           when = DateTime(when.year, when.month, when.day, when.hour,
@@ -135,8 +135,8 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
               icon: const Icon(Icons.refresh),
               tooltip: 'Refresh',
               onPressed: () => setState(() {
-                departures = null;
-                lastLoaded = null;
+                _departures = null;
+                _lastLoaded = null;
                 loadTimetable();
               }),
             )
@@ -148,29 +148,28 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
   @override
   void dispose() {
     super.dispose();
-    timer.cancel();
-    screenStateListener.cancel();
+    _timer.cancel();
+    _screenStateListener.cancel();
     WidgetsBinding.instance.removeObserver(this);
   }
 
   Future<void> loadTimetable() async {
     final DateTime now = DateTime.now();
-    if ((lastLoaded == null || now.difference(lastLoaded).inMinutes >= 1) &&
-        screenOn == true &&
+    if ((_lastLoaded == null || now.difference(_lastLoaded).inMinutes >= 1) &&
+        _screenOn == true &&
         mounted == true &&
-        appState == AppLifecycleState.resumed) {
-      lastLoaded = now;
-      print('Getting data.');
+        _appState == AppLifecycleState.resumed) {
+      _lastLoaded = now;
       try {
         final Response r = await get(getStopUri(stop));
         final dynamic json = jsonDecode(r.body);
         final Map<String, dynamic> departureListsData =
             json['departures'] as Map<String, dynamic>;
-        error = json['error'] as String;
-        if (error != null) {
+        _error = json['error'] as String;
+        if (_error != null) {
           return;
         }
-        departures = <Departure>[];
+        _departures = <Departure>[];
         for (final dynamic departureListData in departureListsData.values) {
           for (final dynamic departureData
               in departureListData as List<dynamic>) {
@@ -221,7 +220,7 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
             final String source = departureData['source'] as String;
             final String url = (departureData['id'] ??
                 departureData['service_timetable']['id']) as String;
-            departures.add(Departure(
+            _departures.add(Departure(
                 stop.type,
                 name,
                 mode,
@@ -238,13 +237,13 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
           }
         }
       } catch (e) {
-        error = e.toString();
+        _error = e.toString();
         rethrow;
       }
     }
     setState(() {
-      if (departures != null) {
-        departures.sort((Departure a, Departure b) =>
+      if (_departures != null) {
+        _departures.sort((Departure a, Departure b) =>
             a.aimedDeparture.compareTo(b.aimedDeparture));
       }
     });

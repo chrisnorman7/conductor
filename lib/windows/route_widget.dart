@@ -30,62 +30,63 @@ class RouteWidgetState extends State<RouteWidget> {
   final Departure departure;
   final Stop startingStop;
 
-  String error;
-  List<RouteStop> stops;
-  RouteStop origin;
-  RouteStop destination;
-  RouteStop nearestStop;
-  StreamSubscription<LocationData> locationSubscription;
+  String _error;
+  List<RouteStop> _stops;
+  RouteStop _origin;
+  RouteStop _destination;
+  RouteStop _nearestStop;
+  StreamSubscription<LocationData> _locationSubscription;
 
   @override
   void initState() {
     super.initState();
     loadRoute();
-    locationSubscription = location.onLocationChanged.listen(updateLocation);
+    _locationSubscription = location.onLocationChanged.listen(updateLocation);
   }
 
   @override
   Widget build(BuildContext context) {
     Widget child;
-    if (error != null) {
-      child = Text(error);
-    } else if (stops == null) {
+    if (_error != null) {
+      child = Text(_error);
+    } else if (_stops == null) {
       child = const Text('Loading...');
-    } else if (stops.isEmpty) {
+    } else if (_stops.isEmpty) {
       child = const Text('This route appears to be empty.');
     } else {
       child = ListView.builder(
-        itemCount: stops.length + 1,
+        itemCount: _stops.length + 1,
         itemBuilder: (BuildContext context, int index) {
           if (index == 0) {
             return Semantics(
               child: ListTile(
                 leading: const Text('Nearest stop'),
                 title: Semantics(
-                  child: Text(nearestStop == null
+                  child: Text(_nearestStop == null
                       ? 'Getting location...'
-                      : nearestStop.stop.name),
+                      : _nearestStop.stop.name),
                   liveRegion: true,
                 ),
                 subtitle: Semantics(
                     liveRegion: true,
-                    child: Text(nearestStop == null
+                    child: Text(_nearestStop == null
                         ? 'Unknown'
-                        : distanceToString(nearestStop.distance))),
+                        : distanceToString(_nearestStop.distance))),
                 isThreeLine: true,
               ),
               header: true,
             );
           }
-          final RouteStop stop = stops[index - 1];
+          final RouteStop stop = _stops[index - 1];
           String when;
           String name = stop.stop.name;
-          if (stop == origin) {
+          if (stop == _origin) {
             name += ' (origin stop)';
-          } else if (stop == destination) {
+          } else if (stop == _destination) {
             name += ' (destination stop)';
           }
-          final Duration difference = stop.date.difference(origin.date);
+          final Duration difference =
+              stop.date.difference(_nearestStop?.date ?? _origin.date);
           when = '${difference.isNegative ? "-" : "+"} ';
           if (difference.inHours > 0) {
             when +=
@@ -113,11 +114,11 @@ class RouteWidgetState extends State<RouteWidget> {
       );
     }
     String name = departure.name;
-    if (origin != null) {
-      name += ' from ${origin.stop.name}';
+    if (_origin != null) {
+      name += ' from ${_origin.stop.name}';
     }
-    if (destination != null) {
-      name += ' to ${destination.stop.name}';
+    if (_destination != null) {
+      name += ' to ${_destination.stop.name}';
     }
     return Scaffold(
       appBar: AppBar(
@@ -129,7 +130,7 @@ class RouteWidgetState extends State<RouteWidget> {
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
             onPressed: () => setState(() {
-              stops = null;
+              _stops = null;
               loadRoute();
             }),
           )
@@ -143,18 +144,18 @@ class RouteWidgetState extends State<RouteWidget> {
   @override
   void dispose() {
     super.dispose();
-    locationSubscription.cancel();
+    _locationSubscription.cancel();
   }
 
   Future<void> loadRoute() async {
     try {
       final Response r = await get(departure.url);
       final dynamic json = jsonDecode(r.body);
-      error = json['error'] as String;
-      if (error != null) {
+      _error = json['error'] as String;
+      if (_error == null) {
         final String originCode = json['origin_atcocode'] as String;
         final List<dynamic> stopsListData = json['stops'] as List<dynamic>;
-        stops = <RouteStop>[];
+        _stops = <RouteStop>[];
         for (final dynamic stopData in stopsListData) {
           final String dateString = (stopData['date'] ??
               stopData['expected_departure_date'] ??
@@ -184,33 +185,33 @@ class RouteWidgetState extends State<RouteWidget> {
           final RouteStop rs = RouteStop(date, stop);
           if (rs.stop.code == originCode ||
               stop.name == (stopData['origin_name'] as String)) {
-            origin = rs;
+            _origin = rs;
           }
           if (stop.name == stopData['destination_name'] as String) {
-            destination = rs;
+            _destination = rs;
           }
-          stops.add(rs);
+          _stops.add(rs);
         }
       }
     } catch (e) {
-      error = e.toString();
+      _error = e.toString();
       rethrow;
     }
     setState(() {
-      if (error != null && stops != null && stops.isNotEmpty) {
-        origin ??= stops.first;
-        destination ??= stops.last;
+      if (_error != null && _stops != null && _stops.isNotEmpty) {
+        _origin ??= _stops.first;
+        _destination ??= _stops.last;
       }
     });
   }
 
   void updateLocation(LocationData data) {
-    if (stops == null) {
+    if (_stops == null) {
       return;
     }
     final SimpleLocation location =
         SimpleLocation(data.latitude, data.longitude, data.accuracy.toInt());
-    for (final RouteStop stop in stops) {
+    for (final RouteStop stop in _stops) {
       if (stop.stop.location == null) {
         continue;
       }
@@ -219,8 +220,8 @@ class RouteWidgetState extends State<RouteWidget> {
           max(distance, stop.distance) - min(distance, stop.distance) >=
               data.accuracy) {
         stop.distance = distance;
-        if (nearestStop == null || nearestStop.distance > stop.distance) {
-          nearestStop = stop;
+        if (_nearestStop == null || _nearestStop.distance > stop.distance) {
+          _nearestStop = stop;
         }
       }
     }

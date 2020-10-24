@@ -27,27 +27,27 @@ class NearbyStopsWidget extends StatefulWidget {
 class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   @override
   NearbyStopsWidgetState(this.serviceEnabled, this.permissionStatus) : super();
+
   bool serviceEnabled;
   PermissionStatus permissionStatus;
 
-  SimpleLocation currentLocation;
-  List<Stop> stops;
-  Map<String, String> extraData;
-  DateTime lastLoaded;
-  String error;
+  SimpleLocation _currentLocation;
+  List<Stop> _stops;
+  Map<String, String> _extraData;
+  String _error;
 
   @override
   void initState() {
     super.initState();
     location.onLocationChanged.listen((LocationData data) {
-      currentLocation =
+      _currentLocation =
           SimpleLocation(data.latitude, data.longitude, data.accuracy.floor());
-      if (extraData != null) {
-        extraData['Latitude'] = data.latitude.toStringAsFixed(2);
-        extraData['Longitude'] = data.longitude.toStringAsFixed(2);
-        extraData['GPS Accuracy'] = distanceToString(data.accuracy);
+      if (_extraData != null) {
+        _extraData['Latitude'] = data.latitude.toStringAsFixed(2);
+        _extraData['Longitude'] = data.longitude.toStringAsFixed(2);
+        _extraData['GPS Accuracy'] = distanceToString(data.accuracy);
       }
-      if (stops == null) {
+      if (_stops == null) {
         loadStops();
       } else {
         setState(() {});
@@ -58,21 +58,21 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   @override
   Widget build(BuildContext context) {
     Widget child;
-    if (error != null) {
-      child = Text(error);
-    } else if (currentLocation == null) {
+    if (_error != null) {
+      child = Text(_error);
+    } else if (_currentLocation == null) {
       child = const Text('Getting your location...');
     } else if (serviceEnabled == false ||
         permissionStatus != PermissionStatus.granted) {
       child = const Text(
           'In order to work correctly, this app needs access to location services. Please grant location access for this app to continue.');
-    } else if (stops == null) {
+    } else if (_stops == null) {
       child = const Text('Loading...');
     } else {
       child = ListView.builder(
-        itemCount: stops.length,
+        itemCount: _stops.length,
         itemBuilder: (BuildContext context, int index) {
-          final Stop stop = stops[index];
+          final Stop stop = _stops[index];
           String type;
           if (stop.type == StopTypes.bus) {
             type = 'Bus stop';
@@ -84,7 +84,7 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
             type = 'Tram stop';
           }
           final String distance =
-              distanceToString(currentLocation.distanceBetween(stop.location));
+              distanceToString(_currentLocation.distanceBetween(stop.location));
           return ListTile(
             isThreeLine: true,
             title: Text(stop.name),
@@ -106,20 +106,20 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
         actions: <Widget>[
           ElevatedButton(
               child: const Text('Data Attribution'),
-              onPressed: (extraData == null || extraData.isEmpty)
+              onPressed: (_extraData == null || _extraData.isEmpty)
                   ? null
                   : () => Navigator.push<ExtraDataWidget>(
                       context,
                       MaterialPageRoute<ExtraDataWidget>(
-                          builder: (BuildContext context) =>
-                              ExtraDataWidget('Data Attribution', extraData)))),
+                          builder: (BuildContext context) => ExtraDataWidget(
+                              'Data Attribution', _extraData)))),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
-            onPressed: currentLocation == null
+            onPressed: _currentLocation == null
                 ? null
                 : () => setState(() {
-                      stops = null;
+                      _stops = null;
                       loadStops();
                     }),
           )
@@ -131,19 +131,19 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
 
   Future<void> loadStops() async {
     final Uri u = getApiUri(placesPath, params: <String, String>{
-      'lat': currentLocation.lat.toString(),
-      'lon': currentLocation.lon.toString()
+      'lat': _currentLocation.lat.toString(),
+      'lon': _currentLocation.lon.toString()
     });
     try {
       final Response r = await get(u);
       final Map<String, dynamic> json =
           jsonDecode(r.body) as Map<String, dynamic>;
-      error = json['error'] as String;
-      stops = <Stop>[];
-      if (error == null) {
-        extraData = <String, String>{};
-        extraData['Source'] = json['source'] as String;
-        extraData['Acknowledgements'] = json['acknowledgements'] as String;
+      _error = json['error'] as String;
+      _stops = <Stop>[];
+      if (_error == null) {
+        _extraData = <String, String>{};
+        _extraData['Source'] = json['source'] as String;
+        _extraData['Acknowledgements'] = json['acknowledgements'] as String;
         for (final dynamic data in json['member'] as List<dynamic>) {
           final Map<String, dynamic> stopData = data as Map<String, dynamic>;
           StopTypes type;
@@ -181,13 +181,13 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
               SimpleLocation(stopData['latitude'] as double,
                   stopData['longitude'] as double, stopData['accuracy'] as int),
               code);
-          stops.add(stop);
+          _stops.add(stop);
         }
       } else {
-        extraData = null;
+        _extraData = null;
       }
     } catch (e) {
-      error = e.toString();
+      _error = e.toString();
       rethrow;
     }
     setState(() {});
