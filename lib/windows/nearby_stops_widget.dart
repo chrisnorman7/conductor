@@ -58,7 +58,9 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   @override
   Widget build(BuildContext context) {
     Widget child;
-    if (currentLocation == null) {
+    if (error != null) {
+      child = Text(error);
+    } else if (currentLocation == null) {
       child = const Text('Getting your location...');
     } else if (serviceEnabled == false ||
         permissionStatus != PermissionStatus.granted) {
@@ -66,8 +68,6 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
           'In order to work correctly, this app needs access to location services. Please grant location access for this app to continue.');
     } else if (stops == null) {
       child = const Text('Loading...');
-    } else if (error != null) {
-      child = Text(error);
     } else {
       child = ListView.builder(
         itemCount: stops.length,
@@ -134,56 +134,61 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
       'lat': currentLocation.lat.toString(),
       'lon': currentLocation.lon.toString()
     });
-    final Response r = await get(u);
-    final Map<String, dynamic> json =
-        jsonDecode(r.body) as Map<String, dynamic>;
-    stops = <Stop>[];
-    error = json['error'] as String;
-    if (error == null) {
-      extraData = <String, String>{};
-      extraData['Source'] = json['source'] as String;
-      extraData['Acknowledgements'] = json['acknowledgements'] as String;
-      for (final dynamic data in json['member'] as List<dynamic>) {
-        final Map<String, dynamic> stopData = data as Map<String, dynamic>;
-        StopTypes type;
-        String name = stopData['name'] as String;
-        String code;
-        final String t = stopData['type'] as String;
-        switch (t) {
-          case 'bus_stop':
-            type = StopTypes.bus;
-            break;
-          case 'train_station':
-            type = StopTypes.train;
-            break;
-          case 'tram_stop':
-            type = StopTypes.tram;
-            break;
-          case 'tube_station':
-            type = StopTypes.tube;
-            break;
-          case 'postcode':
-            continue;
-          default:
-            print(stopData);
-            continue;
+    try {
+      final Response r = await get(u);
+      final Map<String, dynamic> json =
+          jsonDecode(r.body) as Map<String, dynamic>;
+      error = json['error'] as String;
+      stops = <Stop>[];
+      if (error == null) {
+        extraData = <String, String>{};
+        extraData['Source'] = json['source'] as String;
+        extraData['Acknowledgements'] = json['acknowledgements'] as String;
+        for (final dynamic data in json['member'] as List<dynamic>) {
+          final Map<String, dynamic> stopData = data as Map<String, dynamic>;
+          StopTypes type;
+          String name = stopData['name'] as String;
+          String code;
+          final String t = stopData['type'] as String;
+          switch (t) {
+            case 'bus_stop':
+              type = StopTypes.bus;
+              break;
+            case 'train_station':
+              type = StopTypes.train;
+              break;
+            case 'tram_stop':
+              type = StopTypes.tram;
+              break;
+            case 'tube_station':
+              type = StopTypes.tube;
+              break;
+            case 'postcode':
+              continue;
+            default:
+              print(stopData);
+              continue;
+          }
+          if (type == StopTypes.train) {
+            code = stopData['station_code'] as String;
+          } else {
+            code = stopData['atcocode'] as String;
+            name = '$name (${stopData["description"]})';
+          }
+          final Stop stop = Stop(
+              type,
+              name,
+              SimpleLocation(stopData['latitude'] as double,
+                  stopData['longitude'] as double, stopData['accuracy'] as int),
+              code);
+          stops.add(stop);
         }
-        if (type == StopTypes.train) {
-          code = stopData['station_code'] as String;
-        } else {
-          code = stopData['atcocode'] as String;
-          name = '$name (${stopData["description"]})';
-        }
-        final Stop stop = Stop(
-            type,
-            name,
-            SimpleLocation(stopData['latitude'] as double,
-                stopData['longitude'] as double, stopData['accuracy'] as int),
-            code);
-        stops.add(stop);
+      } else {
+        extraData = null;
       }
-    } else {
-      extraData = null;
+    } catch (e) {
+      error = e.toString();
+      rethrow;
     }
     setState(() {});
   }

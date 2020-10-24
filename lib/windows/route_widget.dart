@@ -30,6 +30,7 @@ class RouteWidgetState extends State<RouteWidget> {
   final Departure departure;
   final Stop startingStop;
 
+  String error;
   List<RouteStop> stops;
   RouteStop origin;
   RouteStop destination;
@@ -46,7 +47,9 @@ class RouteWidgetState extends State<RouteWidget> {
   @override
   Widget build(BuildContext context) {
     Widget child;
-    if (stops == null) {
+    if (error != null) {
+      child = Text(error);
+    } else if (stops == null) {
       child = const Text('Loading...');
     } else if (stops.isEmpty) {
       child = const Text('This route appears to be empty.');
@@ -58,16 +61,20 @@ class RouteWidgetState extends State<RouteWidget> {
             return Semantics(
               child: ListTile(
                 leading: const Text('Nearest stop'),
-                title: Text(nearestStop == null
-                    ? 'Getting location...'
-                    : nearestStop.stop.name),
-                subtitle: Text(nearestStop == null
-                    ? 'Unknown'
-                    : distanceToString(nearestStop.distance)),
+                title: Semantics(
+                  child: Text(nearestStop == null
+                      ? 'Getting location...'
+                      : nearestStop.stop.name),
+                  liveRegion: true,
+                ),
+                subtitle: Semantics(
+                    liveRegion: true,
+                    child: Text(nearestStop == null
+                        ? 'Unknown'
+                        : distanceToString(nearestStop.distance))),
                 isThreeLine: true,
               ),
               header: true,
-              liveRegion: true,
             );
           }
           final RouteStop stop = stops[index - 1];
@@ -140,50 +147,60 @@ class RouteWidgetState extends State<RouteWidget> {
   }
 
   Future<void> loadRoute() async {
-    final Response r = await get(departure.url);
-    final dynamic json = jsonDecode(r.body);
-    final String originCode = json['origin_atcocode'] as String;
-    final List<dynamic> stopsListData = json['stops'] as List<dynamic>;
-    stops = <RouteStop>[];
-    for (final dynamic stopData in stopsListData) {
-      final String dateString = (stopData['date'] ??
-          stopData['expected_departure_date'] ??
-          stopData['aimed_departure_date'] ??
-          stopData['aimed_arrival_date']) as String;
-      final String timeString = (stopData['time'] ??
-          stopData['expected_departure_time'] ??
-          stopData['aimed_arrival_time'] ??
-          stopData['aimed_departure_time'] ??
-          stopData['expected_arrival_time']) as String;
-      DateTime date = DateTime.tryParse('$dateString $timeString');
-      date =
-          DateTime(date.year, date.month, date.day, date.hour, date.minute, 0);
-      SimpleLocation stopLocation;
-      if (stopData['latitude'] != null) {
-        stopLocation = SimpleLocation(
-            stopData['latitude'] as double, stopData['longitude'] as double, 0);
+    try {
+      final Response r = await get(departure.url);
+      final dynamic json = jsonDecode(r.body);
+      error = json['error'] as String;
+      if (error != null) {
+        final String originCode = json['origin_atcocode'] as String;
+        final List<dynamic> stopsListData = json['stops'] as List<dynamic>;
+        stops = <RouteStop>[];
+        for (final dynamic stopData in stopsListData) {
+          final String dateString = (stopData['date'] ??
+              stopData['expected_departure_date'] ??
+              stopData['aimed_departure_date'] ??
+              stopData['aimed_arrival_date']) as String;
+          final String timeString = (stopData['time'] ??
+              stopData['expected_departure_time'] ??
+              stopData['aimed_arrival_time'] ??
+              stopData['aimed_departure_time'] ??
+              stopData['expected_arrival_time']) as String;
+          DateTime date = DateTime.tryParse('$dateString $timeString');
+          date = DateTime(
+              date.year, date.month, date.day, date.hour, date.minute, 0);
+          SimpleLocation stopLocation;
+          if (stopData['latitude'] != null) {
+            stopLocation = SimpleLocation(stopData['latitude'] as double,
+                stopData['longitude'] as double, 0);
+          }
+          Stop stop = Stop(
+              departure.type,
+              (stopData['stop_name'] ?? stopData['station_name']) as String,
+              stopLocation,
+              (stopData['atcocode'] ?? stopData['station_code']) as String);
+          if (stop.code == startingStop.code) {
+            stop = startingStop;
+          }
+          final RouteStop rs = RouteStop(date, stop);
+          if (rs.stop.code == originCode ||
+              stop.name == (stopData['origin_name'] as String)) {
+            origin = rs;
+          }
+          if (stop.name == stopData['destination_name'] as String) {
+            destination = rs;
+          }
+          stops.add(rs);
+        }
       }
-      Stop stop = Stop(
-          departure.type,
-          (stopData['stop_name'] ?? stopData['station_name']) as String,
-          stopLocation,
-          (stopData['atcocode'] ?? stopData['station_code']) as String);
-      if (stop.code == startingStop.code) {
-        stop = startingStop;
-      }
-      final RouteStop rs = RouteStop(date, stop);
-      if (rs.stop.code == originCode ||
-          stop.name == (stopData['origin_name'] as String)) {
-        origin = rs;
-      }
-      if (stop.name == stopData['destination_name'] as String) {
-        destination = rs;
-      }
-      stops.add(rs);
+    } catch (e) {
+      error = e.toString();
+      rethrow;
     }
     setState(() {
-      origin ??= stops.first;
-      destination ??= stops.last;
+      if (error != null && stops != null && stops.isNotEmpty) {
+        origin ??= stops.first;
+        destination ??= stops.last;
+      }
     });
   }
 

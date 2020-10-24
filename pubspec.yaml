@@ -31,6 +31,7 @@ dependencies:
 
   http:
   location:
+  screen_state:
 
 dev_dependencies:
   flutter_test:
