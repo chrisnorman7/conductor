@@ -8,6 +8,7 @@ import 'package:http/http.dart';
 
 import '../api.dart';
 import '../departure.dart';
+import '../favourites_store.dart';
 import '../stop.dart';
 import 'route_widget.dart';
 
@@ -131,6 +132,19 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
           ),
           title: Text(stop.name),
           actions: <Widget>[
+            IconButton(
+              tooltip:
+                  '${favourites.isFavourite(stop) ? "Remove" : "Add"} Favourite',
+              icon: const Icon(Icons.favorite),
+              onPressed: () => setState(() {
+                if (favourites.isFavourite(stop)) {
+                  favourites.removeFavourite(stop);
+                } else {
+                  favourites.addFavourite(stop);
+                }
+                favourites.saveFavourites();
+              }),
+            ),
             IconButton(
               icon: const Icon(Icons.refresh),
               tooltip: 'Refresh',

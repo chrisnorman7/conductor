@@ -7,6 +7,7 @@ import 'package:http/http.dart';
 import 'package:location/location.dart';
 
 import '../api.dart';
+import '../favourites_store.dart';
 import '../location.dart';
 import '../stop.dart';
 import 'api_credentials_form.dart';
@@ -36,6 +37,7 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   List<Stop> _stops;
   Map<String, String> _extraData;
   String _error;
+  bool showingFavourites = false;
 
   @override
   void initState() {
@@ -115,8 +117,9 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
         ),
         title: const Text('Nearby Stops'),
         actions: <Widget>[
-          ElevatedButton(
-              child: const Text('Data Attribution'),
+          IconButton(
+              icon: const Icon(Icons.info),
+              tooltip: 'Information',
               onPressed: (_extraData == null || _extraData.isEmpty)
                   ? null
                   : () => Navigator.push<ExtraDataWidget>(
@@ -124,6 +127,21 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
                       MaterialPageRoute<ExtraDataWidget>(
                           builder: (BuildContext context) => ExtraDataWidget(
                               'Data Attribution', _extraData)))),
+          IconButton(
+            icon: const Icon(Icons.favorite),
+            tooltip: showingFavourites ? 'Nearby Stops' : 'Favourites',
+            onPressed: showingFavourites || favourites.count > 0
+                ? () => setState(() {
+                      if (showingFavourites) {
+                        showingFavourites = false;
+                        loadStops();
+                      } else {
+                        showingFavourites = true;
+                        _stops = favourites.stops;
+                      }
+                    })
+                : null,
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
