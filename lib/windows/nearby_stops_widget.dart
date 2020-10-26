@@ -34,6 +34,7 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   PermissionStatus permissionStatus;
 
   SimpleLocation _currentLocation;
+  SimpleLocation _lastCheckedLocation;
   List<Stop> _stops;
   Map<String, String> _extraData;
   String _error;
@@ -50,7 +51,10 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
         _extraData['Longitude'] = data.longitude.toStringAsFixed(2);
         _extraData['GPS Accuracy'] = distanceToString(data.accuracy);
       }
-      if (_stops == null && credentials.valid) {
+      if (credentials.valid &&
+          (_stops == null ||
+              _lastCheckedLocation == null ||
+              _lastCheckedLocation.distanceBetween(_currentLocation) > 100)) {
         loadStops();
       } else {
         setState(() {});
@@ -159,6 +163,8 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   }
 
   Future<void> loadStops() async {
+    print('Do da ting!!!');
+    _lastCheckedLocation = _currentLocation;
     final Uri u = getApiUri(placesPath, params: <String, String>{
       'lat': _currentLocation.lat.toString(),
       'lon': _currentLocation.lon.toString()
