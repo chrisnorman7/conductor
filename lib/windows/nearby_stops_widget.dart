@@ -37,7 +37,7 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   List<Stop> _stops;
   Map<String, String> _extraData;
   String _error;
-  bool showingFavourites = false;
+  bool _showingFavourites = false;
 
   @override
   void initState() {
@@ -129,14 +129,14 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
                               'Data Attribution', _extraData)))),
           IconButton(
             icon: const Icon(Icons.favorite),
-            tooltip: showingFavourites ? 'Nearby Stops' : 'Favourites',
-            onPressed: showingFavourites || favourites.count > 0
+            tooltip: _showingFavourites ? 'Nearby Stops' : 'Favourites',
+            onPressed: _showingFavourites || favourites.count > 0
                 ? () => setState(() {
-                      if (showingFavourites) {
-                        showingFavourites = false;
+                      if (_showingFavourites) {
+                        _showingFavourites = false;
                         loadStops();
                       } else {
-                        showingFavourites = true;
+                        _showingFavourites = true;
                         _stops = favourites.stops;
                       }
                     })
