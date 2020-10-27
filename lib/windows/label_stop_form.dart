@@ -58,7 +58,7 @@ class LabelStopFormState extends State<LabelStopForm> {
                   ? () {
                       labels.removeLabel(_stop.code);
                       Navigator.of(context).pop();
-                      _callback();
+                      done();
                     }
                   : null,
             ),
@@ -69,7 +69,7 @@ class LabelStopFormState extends State<LabelStopForm> {
                   if (_key.currentState.validate()) {
                     labels.addLabel(_stop.code, _labelController.text);
                     Navigator.of(context).pop();
-                    _callback();
+                    done();
                   }
                 })
           ],
@@ -81,5 +81,10 @@ class LabelStopFormState extends State<LabelStopForm> {
   void dispose() {
     super.dispose();
     _labelController.dispose();
+  }
+
+  void done() {
+    labels.saveLabels();
+    _callback();
   }
 }

@@ -26,9 +26,10 @@ class LabelsStore {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final String json = prefs.getString(_key);
     if (json != null) {
-      final Map<String, String> data = jsonDecode(json) as Map<String, String>;
-      data.forEach((String key, String value) {
-        _labels[key] = value;
+      final Map<dynamic, dynamic> data =
+          jsonDecode(json) as Map<dynamic, dynamic>;
+      data.forEach((dynamic key, dynamic value) {
+        _labels[key as String] = value as String;
       });
     }
   }
