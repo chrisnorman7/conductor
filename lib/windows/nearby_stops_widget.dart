@@ -192,11 +192,9 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget>
   }
 
   Future<void> loadStops() async {
-    print('Hello.');
     _lastCheckedLocation = _currentLocation;
     _lastChecked = DateTime.now();
     if (!_showingFavourites) {
-      print('Loading data.');
       final Uri u = getApiUri(placesPath, params: <String, String>{
         'lat': _currentLocation.lat.toString(),
         'lon': _currentLocation.lon.toString()

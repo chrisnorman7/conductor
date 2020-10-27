@@ -115,8 +115,8 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
                 '$difference (platform ${departure.platform ?? "unknown"})';
           }
           return ListTile(
-              isThreeLine: true,
-              leading: Text('${departure.name}: ${departure.destination}'),
+              // isThreeLine: true,
+              title: Text('${departure.name}: ${departure.destination}'),
               subtitle: Text(difference),
               trailing: Text(departure.operator),
               onTap: () => Navigator.push(
