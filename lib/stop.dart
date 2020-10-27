@@ -1,4 +1,5 @@
 /// Provides the classes required for bus, tram and train stops.
+import 'labels_store.dart';
 import 'location.dart';
 
 enum StopTypes { bus, train, tram, tube }
@@ -9,13 +10,17 @@ enum StopTypes { bus, train, tram, tube }
 class Stop {
   Stop(
     this.type,
-    this.name,
+    this.realName,
     this.location,
     this.code,
   );
 
   final StopTypes type;
-  final String name;
+  final String realName;
   final SimpleLocation location;
   final String code;
+
+  String get name {
+    return labels.getLabel(code) ?? realName;
+  }
 }

@@ -35,14 +35,13 @@ class ApiCredentialsFormState extends State<ApiCredentialsForm> {
 
   final Function() _callback;
 
-  GlobalKey<FormState> _key;
+  final GlobalKey<FormState> _key = GlobalKey<FormState>();
   TextEditingController _appIdController;
   TextEditingController _appKeyController;
 
   @override
   void initState() {
     super.initState();
-    _key = GlobalKey<FormState>();
     _appIdController = TextEditingController(text: credentials.appId ?? '');
     _appKeyController = TextEditingController(text: credentials.appKey ?? '');
   }

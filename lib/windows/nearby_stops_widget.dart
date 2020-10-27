@@ -119,7 +119,7 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
                   builder: (BuildContext context) =>
                       ApiCredentialsForm(loadStops))),
         ),
-        title: const Text('Nearby Stops'),
+        title: Text(_showingFavourites ? 'Favourites' : 'Nearby Stops'),
         actions: <Widget>[
           IconButton(
               icon: const Icon(Icons.info),
@@ -163,7 +163,6 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   }
 
   Future<void> loadStops() async {
-    print('Do da ting!!!');
     _lastCheckedLocation = _currentLocation;
     final Uri u = getApiUri(placesPath, params: <String, String>{
       'lat': _currentLocation.lat.toString(),

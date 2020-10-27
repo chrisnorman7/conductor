@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import 'api.dart';
 import 'favourites_store.dart';
+import 'labels_store.dart';
 import 'location.dart' show location;
 import 'windows/loading_widget.dart';
 import 'windows/nearby_stops_widget.dart';
@@ -19,6 +20,7 @@ Future<void> main() async {
   credentials.appId = prefs.getString('appId');
   credentials.appKey = prefs.getString('appKey');
   await favourites.loadFavourites();
+  await labels.loadLabels();
   final bool serviceEnabled = await location.serviceEnabled();
   final PermissionStatus permissionGranted = await location.requestPermission();
   if (serviceEnabled == true && permissionGranted == PermissionStatus.granted) {

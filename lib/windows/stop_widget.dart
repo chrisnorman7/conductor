@@ -3,13 +3,15 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
-import 'package:screen_state/screen_state.dart';
 import 'package:http/http.dart';
+import 'package:screen_state/screen_state.dart';
 
 import '../api.dart';
 import '../departure.dart';
 import '../favourites_store.dart';
+import '../labels_store.dart';
 import '../stop.dart';
+import 'label_stop_form.dart';
 import 'route_widget.dart';
 
 class StopWidget extends StatefulWidget {
@@ -23,9 +25,9 @@ class StopWidget extends StatefulWidget {
 }
 
 class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
-  StopWidgetState(this.stop) : super();
+  StopWidgetState(this._stop) : super();
 
-  final Stop stop;
+  final Stop _stop;
   List<Departure> _departures;
   Timer _timer;
   String _error;
@@ -121,7 +123,7 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
                   context,
                   MaterialPageRoute<RouteWidget>(
                       builder: (BuildContext context) =>
-                          RouteWidget(departure, stop))));
+                          RouteWidget(departure, _stop))));
         },
       );
     }
@@ -130,17 +132,27 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
           leading: BackButton(
             onPressed: () => Navigator.of(context).pop(),
           ),
-          title: Text(stop.name),
+          title: Text(_stop.name),
           actions: <Widget>[
             IconButton(
-              tooltip:
-                  '${favourites.isFavourite(stop) ? "Remove" : "Add"} Favourite',
+              icon: const Icon(Icons.label),
+              tooltip: '${labels.hasLabel(_stop.code) ? "Edit" : "Add"} Label',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute<LabelStopForm>(
+                    builder: (BuildContext context) =>
+                        LabelStopForm(_stop, () => setState(() {}))),
+              ),
+            ),
+            IconButton(
               icon: const Icon(Icons.favorite),
+              tooltip:
+                  '${favourites.isFavourite(_stop) ? "Remove" : "Add"} Favourite',
               onPressed: () => setState(() {
-                if (favourites.isFavourite(stop)) {
-                  favourites.removeFavourite(stop);
+                if (favourites.isFavourite(_stop)) {
+                  favourites.removeFavourite(_stop);
                 } else {
-                  favourites.addFavourite(stop);
+                  favourites.addFavourite(_stop);
                 }
                 favourites.saveFavourites();
               }),
@@ -175,7 +187,7 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
         _appState == AppLifecycleState.resumed) {
       _lastLoaded = now;
       try {
-        final Response r = await get(getStopUri(stop));
+        final Response r = await get(getStopUri(_stop));
         final dynamic json = jsonDecode(r.body);
         final Map<String, dynamic> departureListsData =
             json['departures'] as Map<String, dynamic>;
@@ -235,7 +247,7 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
             final String url = (departureData['id'] ??
                 departureData['service_timetable']['id']) as String;
             _departures.add(Departure(
-                stop.type,
+                _stop.type,
                 name,
                 mode,
                 departureData['platform'] as String,
