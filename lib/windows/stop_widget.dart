@@ -49,15 +49,11 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _screenOn = true;
     _screen = Screen();
-    try {
-      _screenStateListener =
-          _screen.screenStateStream.listen((ScreenStateEvent event) {
-        _screenOn = event == ScreenStateEvent.SCREEN_UNLOCKED ||
-            event == ScreenStateEvent.SCREEN_ON;
-      });
-    } catch (e) {
-      print('Failed to listen for screen events.');
-    }
+    _screenStateListener =
+        _screen.screenStateStream.listen((ScreenStateEvent event) {
+      _screenOn = event == ScreenStateEvent.SCREEN_UNLOCKED ||
+          event == ScreenStateEvent.SCREEN_ON;
+    });
     loadTimetable();
     _timer = Timer.periodic(const Duration(seconds: 1), (Timer t) {
       loadTimetable();
@@ -179,7 +175,6 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
   void dispose() {
     super.dispose();
     _timer.cancel();
-    if (_screenStateListener != null) {}
     _screenStateListener.cancel();
     WidgetsBinding.instance.removeObserver(this);
   }

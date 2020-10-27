@@ -5,6 +5,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart';
 import 'package:location/location.dart';
+import 'package:screen_state/screen_state.dart';
 
 import '../api.dart';
 import '../favourites_store.dart';
@@ -26,7 +27,8 @@ class NearbyStopsWidget extends StatefulWidget {
       NearbyStopsWidgetState(serviceEnabled, permissionStatus);
 }
 
-class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
+class NearbyStopsWidgetState extends State<NearbyStopsWidget>
+    with WidgetsBindingObserver {
   @override
   NearbyStopsWidgetState(this.serviceEnabled, this.permissionStatus) : super();
 
@@ -40,9 +42,24 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
   String _error;
   bool _showingFavourites = false;
 
+  Screen _screen;
+  StreamSubscription<ScreenStateEvent> _screenStateListener;
+  bool _screenOn;
+  AppLifecycleState _appState;
+  DateTime _lastChecked;
+
   @override
   void initState() {
     super.initState();
+    _appState = AppLifecycleState.resumed;
+    WidgetsBinding.instance.addObserver(this);
+    _screenOn = true;
+    _screen = Screen();
+    _screenStateListener =
+        _screen.screenStateStream.listen((ScreenStateEvent event) {
+      _screenOn = event == ScreenStateEvent.SCREEN_UNLOCKED ||
+          event == ScreenStateEvent.SCREEN_ON;
+    });
     location.onLocationChanged.listen((LocationData data) {
       _currentLocation =
           SimpleLocation(data.latitude, data.longitude, data.accuracy.floor());
@@ -51,7 +68,12 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
         _extraData['Longitude'] = data.longitude.toStringAsFixed(2);
         _extraData['GPS Accuracy'] = distanceToString(data.accuracy);
       }
+      final DateTime now = DateTime.now();
       if (credentials.valid &&
+          _screenOn &&
+          _appState == AppLifecycleState.resumed &&
+          (_lastChecked == null ||
+              now.difference(_lastChecked).inMinutes >= 1) &&
           (_stops == null ||
               _lastCheckedLocation == null ||
               _lastCheckedLocation.distanceBetween(_currentLocation) > 100)) {
@@ -149,7 +171,7 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
           IconButton(
             icon: const Icon(Icons.refresh),
             tooltip: 'Refresh',
-            onPressed: _currentLocation == null
+            onPressed: _currentLocation == null || _showingFavourites
                 ? null
                 : () => setState(() {
                       _stops = null;
@@ -162,67 +184,81 @@ class NearbyStopsWidgetState extends State<NearbyStopsWidget> {
     );
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+    _screenStateListener.cancel();
+    WidgetsBinding.instance.removeObserver(this);
+  }
+
   Future<void> loadStops() async {
+    print('Hello.');
     _lastCheckedLocation = _currentLocation;
-    final Uri u = getApiUri(placesPath, params: <String, String>{
-      'lat': _currentLocation.lat.toString(),
-      'lon': _currentLocation.lon.toString()
-    });
-    try {
-      final Response r = await get(u);
-      final Map<String, dynamic> json =
-          jsonDecode(r.body) as Map<String, dynamic>;
-      _error = json['error'] as String;
-      _stops = <Stop>[];
-      if (_error == null) {
-        _extraData = <String, String>{};
-        _extraData['Source'] = json['source'] as String;
-        _extraData['Acknowledgements'] = json['acknowledgements'] as String;
-        for (final dynamic data in json['member'] as List<dynamic>) {
-          final Map<String, dynamic> stopData = data as Map<String, dynamic>;
-          StopTypes type;
-          String name = stopData['name'] as String;
-          String code;
-          final String t = stopData['type'] as String;
-          switch (t) {
-            case 'bus_stop':
-              type = StopTypes.bus;
-              break;
-            case 'train_station':
-              type = StopTypes.train;
-              break;
-            case 'tram_stop':
-              type = StopTypes.tram;
-              break;
-            case 'tube_station':
-              type = StopTypes.tube;
-              break;
-            case 'postcode':
-              continue;
-            default:
-              print(stopData);
-              continue;
+    _lastChecked = DateTime.now();
+    if (!_showingFavourites) {
+      print('Loading data.');
+      final Uri u = getApiUri(placesPath, params: <String, String>{
+        'lat': _currentLocation.lat.toString(),
+        'lon': _currentLocation.lon.toString()
+      });
+      try {
+        final Response r = await get(u);
+        final Map<String, dynamic> json =
+            jsonDecode(r.body) as Map<String, dynamic>;
+        _error = json['error'] as String;
+        _stops = <Stop>[];
+        if (_error == null) {
+          _extraData = <String, String>{};
+          _extraData['Source'] = json['source'] as String;
+          _extraData['Acknowledgements'] = json['acknowledgements'] as String;
+          for (final dynamic data in json['member'] as List<dynamic>) {
+            final Map<String, dynamic> stopData = data as Map<String, dynamic>;
+            StopTypes type;
+            String name = stopData['name'] as String;
+            String code;
+            final String t = stopData['type'] as String;
+            switch (t) {
+              case 'bus_stop':
+                type = StopTypes.bus;
+                break;
+              case 'train_station':
+                type = StopTypes.train;
+                break;
+              case 'tram_stop':
+                type = StopTypes.tram;
+                break;
+              case 'tube_station':
+                type = StopTypes.tube;
+                break;
+              case 'postcode':
+                continue;
+              default:
+                print(stopData);
+                continue;
+            }
+            if (type == StopTypes.train) {
+              code = stopData['station_code'] as String;
+            } else {
+              code = stopData['atcocode'] as String;
+              name = '$name (${stopData["description"]})';
+            }
+            final Stop stop = Stop(
+                type,
+                name,
+                SimpleLocation(
+                    stopData['latitude'] as double,
+                    stopData['longitude'] as double,
+                    stopData['accuracy'] as int),
+                code);
+            _stops.add(stop);
           }
-          if (type == StopTypes.train) {
-            code = stopData['station_code'] as String;
-          } else {
-            code = stopData['atcocode'] as String;
-            name = '$name (${stopData["description"]})';
-          }
-          final Stop stop = Stop(
-              type,
-              name,
-              SimpleLocation(stopData['latitude'] as double,
-                  stopData['longitude'] as double, stopData['accuracy'] as int),
-              code);
-          _stops.add(stop);
+        } else {
+          _extraData = null;
         }
-      } else {
-        _extraData = null;
+      } catch (e) {
+        _error = e.toString();
+        rethrow;
       }
-    } catch (e) {
-      _error = e.toString();
-      rethrow;
     }
     setState(() {});
   }
