@@ -94,6 +94,9 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
             case DepartureStates.cancelled:
               state = 'cancelled';
               break;
+            case DepartureStates.noReport:
+              state = 'Unknown';
+              break;
             default:
               state = departure.state.toString();
               break;
@@ -115,8 +118,7 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
                 '$difference (platform ${departure.platform ?? "unknown"})';
           }
           return ListTile(
-              // isThreeLine: true,
-              title: Text('${departure.name}: ${departure.destination}'),
+              title: Text('${departure.name} to ${departure.destination}'),
               subtitle: Text(difference),
               trailing: Text(departure.operator),
               onTap: () => Navigator.push(
@@ -205,7 +207,7 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
             final String destination = (departureData['direction'] ??
                 departureData['destination_name']) as String;
             final String operator = departureData['operator_name'] as String;
-            name ??= '$operator from $origin';
+            name ??= origin;
             DateTime aimedDeparture;
             final DateTime now = DateTime.now();
             final String nowDateString =
@@ -239,6 +241,8 @@ class StopWidgetState extends State<StopWidget> with WidgetsBindingObserver {
                 state = DepartureStates.early;
               } else if (status == 'LATE') {
                 state = DepartureStates.late;
+              } else if (status == 'NO REPORT') {
+                state = DepartureStates.noReport;
               } else if (status != 'ON TIME' && status != null) {
                 print(status);
               }

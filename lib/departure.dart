@@ -7,6 +7,7 @@ enum DepartureStates {
   onTime,
   late,
   cancelled,
+  noReport,
 }
 
 class Departure {
