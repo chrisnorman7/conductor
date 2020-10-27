@@ -42,7 +42,11 @@ class LabelStopFormState extends State<LabelStopForm> {
                 hintText: 'The name to display for this stop',
               ),
               validator: (String value) =>
-                  value.isEmpty ? 'You must provide a value' : null)
+                  value.isEmpty ? 'You must provide a value' : null),
+          IconButton(
+              icon: const Icon(Icons.clear),
+              tooltip: 'Clear Text',
+              onPressed: () => setState(() => _labelController.text = ''))
         ],
       ),
     );
